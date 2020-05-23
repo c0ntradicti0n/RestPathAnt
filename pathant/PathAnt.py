@@ -54,7 +54,7 @@ class PathAnt:
 
     def info(self, path="pathant.png", pipelines_to_highlight=None):
         import pylab as plt
-        pylab.rcParams['figure.figsize'] = 20, 20
+        pylab.rcParams['figure.figsize'] = 10,10
 
         dG = self.G.copy()
 
