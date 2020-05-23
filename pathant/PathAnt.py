@@ -54,7 +54,9 @@ class PathAnt:
 
     def info(self, path="pathant.png", pipelines_to_highlight=None):
         import pylab as plt
-        pylab.rcParams['figure.figsize'] = 20, 20
+        pylab.rcParams['figure.figsize'] = 10,10
+        plt.figure(3, figsize=(10, 10))
+
 
         dG = self.G.copy()
 
@@ -98,7 +100,7 @@ class PathAnt:
 
         labels = {n: str(f"{data['functional_object'].api.url} ") for n, data in self.G.nodes(data=True)}
         nx.draw_networkx_labels(dG, pos_attrs, labels=labels)
-        pylab.savefig(path)
+        pylab.savefig(path, dpi=100)
         plt.legend(scatterpoints = 1)
         plt.show()
 
