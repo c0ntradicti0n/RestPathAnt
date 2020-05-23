@@ -9,16 +9,18 @@ from more_itertools import pairwise
 
 from helpers.os_tools import make_dirs_recursive
 from pathant.Pipeline import Pipeline
-from pathant.converters import converters
+from pathant.converters import converters, converter_nodes
 
 
 class PathAnt:
-    def __init__(self, necessary_paths={".layouteagle":["tex_data", "cache", "log"]}):
-        make_dirs_recursive(necessary_paths)
+    def __init__(self):
         self.G = nx.DiGraph()
 
         for _from, _to, functional_object in converters:
             self.add_edge(_from, _to, functional_object)
+
+        for _node, functional_object in converter_nodes:
+            self.add_node(_node, functional_object)
 
 
     def realize_node(self, node):
@@ -35,7 +37,6 @@ class PathAnt:
         if over:
             if isinstance(over, str):
                 return self.__call__(source, over, *args) + self.__call__(over, target, **kwargs)
-
 
         converters_path = self.make_path(self.G, source, target)
         converters_implications = {uv: [_a for _a in a if _a not in converters_path ]
@@ -60,6 +61,7 @@ class PathAnt:
         nx.set_edge_attributes(dG, 0, 'color')
         nx.set_edge_attributes(dG, " ", 'label')
 
+
         if pipelines_to_highlight:
             for  color, pipeline in enumerate(pipelines_to_highlight):
                 pipe_path = self.make_path(dG, pipeline.source, pipeline.target)
@@ -68,8 +70,6 @@ class PathAnt:
                     dG[u][v]['color'] = color + 1
                 for n in pipe_path:
                     dG.nodes[n]['label'] =  str(pipeline)
-
-
 
         edge_colors = nx.get_edge_attributes(dG, 'color').values()
 
@@ -92,17 +92,18 @@ class PathAnt:
                 arrowsize=20, label='Path Ant',
                 node_size=150, edge_cmap=plt.cm.plasma)
 
-
         pos_attrs = {}
         for node, coords in pos.items():
             pos_attrs[node] = coords[0] + 0.08, coords[1]
 
-
-        nx.draw_networkx_labels(dG, pos_attrs)
+        labels = {n: str(f"{data['functional_object'].api.url} ") for n, data in self.G.nodes(data=True)}
+        nx.draw_networkx_labels(dG, pos_attrs, labels=labels)
         pylab.savefig(path)
         plt.legend(scatterpoints = 1)
         plt.show()
 
+    def add_node(self, node, functional_object, **kwargs):
+        self.G.add_node(node, functional_object=functional_object, **kwargs)
 
     def add_edge(self, froms, tos, functional_object, **kwargs):
         if isinstance(froms, (List)):
@@ -133,10 +134,9 @@ class PathAnt:
             if len(possible_path) == 2:
                 return self.lookup(*possible_path)
 
-    def get_all_paths(self):
-        for _in, _out in itertools.permutations(self.G.nodes, 2):
-            if nx.is_connected(_in, _out):
-                yield from nx.all_simple_paths(self.G)
+    def get_all_possible_edges(self):
+        for (_in, _in_data), (_out, _out_data) in itertools.permutations(self.G.nodes(data=True), 2):
+            yield Pipeline([_in_data['functional_object'], _out_data['functional_object']])
 
 
 

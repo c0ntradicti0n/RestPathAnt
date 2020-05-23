@@ -2,14 +2,13 @@ import itertools
 
 
 class Pipeline:
-    def __init__(self, pipeline, source, target, extra_paths):
-        self.extra_paths = extra_paths
-        self.target = target
-        self.source = source
+    def __init__(self, pipeline):
         self.pipeline = pipeline
         self.dummy_generator = itertools.cycle([("dummy", {"meta":None})])
+        self.extra_paths = []
 
     def __call__(self, arg):
+        """ connects the calls of the nodes in the pipeline with intermediate results and a start argument"""
         intermediate_result = arg
         for functional_object in self.pipeline:
             print(intermediate_result)

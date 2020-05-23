@@ -3,6 +3,7 @@ import unittest
 from generalape.api import Api
 from generalape.generalape import GeneralApe
 from pathant.PathAnt import PathAnt
+from pathant.Pipeline import Pipeline
 from test.known_apis import apis
 
 
@@ -19,9 +20,11 @@ class testRestApe(unittest.TestCase):
 
 
         pa = PathAnt()
+        pa.info()
 
-        for path in pa.get_all_paths():
-            path()
+        for edge_pipe in pa.get_all_possible_edges():
+            edge_pipe("blub")
+
 
 
 if __name__ == '__main__':
