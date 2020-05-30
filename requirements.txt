@@ -2,3 +2,4 @@ networkx
 matplotlib
 pygraphviz
 more_itertools
+requests

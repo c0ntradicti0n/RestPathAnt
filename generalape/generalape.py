@@ -1,11 +1,15 @@
 import itertools
+import json
 import logging
+import requests
 
+from generalape.ape import Ape
 from generalape.api import Api
 from helpers.cache_tools import file_persistent_cached_generator
 from pathant.Converter import converter
 from pathant.PathSpec import PathSpec
 from pathant.converters import converter_nodes
+
 
 api_hash_counter = itertools.count(0, 1)
 
@@ -33,13 +37,19 @@ class GeneralApe(PathSpec):
 
     def __call__(self, *args, calling_api_fun=None, **kwargs):
         for fun in self.api:
-            api_fun = (self.api_hash, fun)
+            for method in [requests.post, requests.get]:
 
-            try:
-                res = fun(*args, calling_api_fun=api_fun, **kwargs)
-            except Exception as e:
-                logging.error(e)
-                logging.info(f"{self.api.name} can't eat {args} and {kwargs}")
-            else:
-                _converter = converter(calling_api_fun, api_fun) ()
-                yield res
+                try:
+                    if method == requests.post:
+                        res = method(fun, data=json.dumps(args))
+                    if method == requests.get:
+                        res =  method(fun.format(*args))
+
+                except Exception as e:
+                    logging.error(e)
+                    logging.info(f"{self.api.url} can't eat {args} and {kwargs}")
+                else:
+                    # this creates an edge in the pathants graph
+                    _converter = converter(calling_api_fun, fun, method=method) (Ape(fun, method))
+                    logging.warning("succes!")
+                    yield res

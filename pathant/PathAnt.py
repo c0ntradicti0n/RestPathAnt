@@ -98,7 +98,7 @@ class PathAnt:
         for node, coords in pos.items():
             pos_attrs[node] = coords[0] + 0.08, coords[1]
 
-        labels = {n: str(f"{data['functional_object'].api.url} ") for n, data in self.G.nodes(data=True)}
+        labels = {n: str(f"{data['functional_object'].api.url if data else n} ") for n, data in self.G.nodes(data=True)}
         nx.draw_networkx_labels(dG, pos_attrs, labels=labels)
         pylab.savefig(path, dpi=100)
         plt.legend(scatterpoints = 1)
@@ -123,8 +123,8 @@ class PathAnt:
             for _to in tos:
                 self.add_edge(froms,_to, functional_object, **kwargs)
         else:
-            functional_object.path_spec._from = "." + froms
-            functional_object.path_spec._to = "." + tos
+            #functional_object.path_spec._from = "." + froms
+            #functional_object.path_spec._to = "." + tos
 
             self.G.add_edge(froms,tos, functional_object=functional_object, **kwargs)
 
