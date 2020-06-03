@@ -7,38 +7,41 @@ def file_persistent_cached_generator(filename):
 
     def decorator(original_func):
 
-        def new_func(*param):
+        def new_func(*param, cache_full=True):
             cwd = os.getcwd()
 
             try:
                 with open(filename, 'r') as f:
                     cache = list(f.readlines())
+
                 cache = dict([tuple(json.loads(line)) for line in cache])
-            except (IOError, ValueError):
+            except (IOError, ValueError) as e:
+                logging.warning(f'no cache, starting from 0 {e}')
                 cache = {}
 
-            if isinstance( param[1], list):
-                yield from apply_iterating_and_caching(cache, cwd, param, no_cache=True)
-            else:
-                for result in cache.items():
-                    os.chdir(cwd)
-                    yield result
-
+            #if isinstance( param[1], list):
+            #    yield from apply_iterating_and_caching(cache, cwd, param)
+            #else:
+            for result in cache.items():
+                os.chdir(cwd)
+                yield result
+            if cache_full and not cache:
                 yield from apply_iterating_and_caching(cache, cwd, param)
             os.chdir(cwd)
 
         def apply_iterating_and_caching(cache, cwd, param, no_cache=False):
-            generator = original_func(*param, cache=cache)
-            for result in generator:
+            generator = original_func(*param)
+            if isinstance(generator, dict):
+                generator = list(generator.items())
+            for res, meta in generator:
 
-                result_string = json.dumps(result) + "\n"
-                if no_cache or result_string not in cache:
-                    content, meta = result
+                result_string = json.dumps((res, meta)) + "\n"
+                if no_cache or res not in cache:
                     os.chdir(cwd)
                     with open(filename, 'a') as f:
                         f.write(result_string)
                     os.chdir(cwd)
-                    yield content, meta
+                    yield (res, meta)
 
         functools.update_wrapper(new_func, original_func)
 

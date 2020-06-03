@@ -4,38 +4,35 @@ import os
 from itertools import count
 import random
 
+
 import requests
 import time
 from bs4 import BeautifulSoup
 
-from layouteagle import config
-from layouteagle.helpers.cache_tools import file_persistent_cached_generator
+import config
 
 import logging
 
-from layouteagle.pathant.Converter import converter
-from layouteagle.pathant.PathSpec import PathSpec
+from helpers.cache_tools import file_persistent_cached_generator
+from pathant.Converter import converter
+from pathant.PathSpec import PathSpec
 
 logging.basicConfig(level = logging.INFO)
 
-@converter("any-api.com-parse", "resturl")
+@converter("any-api.com-page", "resturl")
 class Parse(PathSpec):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if not os.path.isdir(config.tex_data):
-            os.system(f"mkdir {config.tex_data}")
+
 
     @file_persistent_cached_generator(config.cache + 'scraped_tex_paths.json')
-    def __iter__(self, url):
-        self.scrape_count = count()
-        self.i = 0
-        self.yet = []
-        self.url = url
-        yield self(url)
+    def __iter__(self, urls_meta):
+        for url, meta in urls_meta:
+            yield self(url, meta)
 
     headers = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.149 Safari/537.36'}
 
-    def __call__(self, url):
+    def __call__(self, url): #h5
         logging.info(f"trying {url}")
 
         try:

@@ -3,95 +3,158 @@ import hashlib
 import os
 from itertools import count
 import random
+import requests_html
+
 
 import requests
 import time
 from bs4 import BeautifulSoup
 
-from layouteagle import config
-from layouteagle.helpers.cache_tools import file_persistent_cached_generator
+import config
+from helpers.cache_tools import file_persistent_cached_generator
+from pathant.Converter import converter
+from pathant.PathSpec import PathSpec
+
+import time
+from selenium import webdriver
+from selenium import webdriver
+
+profile = webdriver.FirefoxProfile()
+profile.set_preference("browser.privatebrowsing.autostart", True)
 
 import logging
 
-from layouteagle.pathant.Converter import converter
-from layouteagle.pathant.PathSpec import PathSpec
 
 logging.basicConfig(level = logging.INFO)
 
-@converter("any-api.com", "any-api.com-page")
 class Scrape(PathSpec):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, url="any-api.com", **kwargs):
         super().__init__(*args, **kwargs)
-        if not os.path.isdir(config.tex_data):
-            os.system(f"mkdir {config.tex_data}")
+        self.url = url
 
-    @file_persistent_cached_generator(config.cache + 'scraped_tex_paths.json')
-    def __iter__(self, url):
+    driver = webdriver.Firefox(firefox_profile=profile)
+
+    def __iter__(self):
         self.scrape_count = count()
         self.i = 0
         self.yet = []
-        self.url = url
-        yield self(url)
+        yield from self(self.url)
 
     headers = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.149 Safari/537.36'}
 
-    def __call__(self, url):
-        logging.info(f"trying {url}")
+    def __call__(self, url0):
+        logging.info(f"0 trying {url0}")
+        if not url0. startswith("http"):
+            url0 = "https://" + url0
 
-        try:
-            response = requests.get(url, headers=self.headers)
-            soup = BeautifulSoup(response.text, "lxml")
-            links = soup.findAll('a')
-            random.shuffle(links)
-            if response.status_code == 404:
-                logging.error(f"404 for {url}")
-                links = []
-        except Exception as e:
-            logging.error(f"Connection error, maybe timeout, maybe headers, maybe bad connection, continuing elsewhere: {e}")
-            links = []
+        logging.info(f"33########### tag-links ########33")
+        links = list(self.get_landing_page(url0))
 
+        logging.info(f"33########### fill-links ########33: {links}")
+        urls2=list(self.get_groups(links))
 
+        logging.info(f"33########### simple path-links ########33: {urls2}")
+        urls3 = list(self.get_raw_paths(urls2))
 
-        hrefs = []
-        for link in links:
-            try:
-                new_href = link['href']
-                if not new_href.startswith("http"):
-                    new_href= self.url + new_href
-                if not (
-                        any(s in new_href for s in ['e-print', 'archive', 'year', 'list', 'format'])
-                        and not any(forbidden in new_href for forbidden in ['cornell.edu', 'pastweek', 'searchtype', 'recent', 'help'])
-                        and new_href not in self.yet):
-                    continue
-            except KeyError:
-                continue
-            hrefs.append(new_href)
+        logging.info(f"33########### concrete links ########33: {urls3}")
+
+        hrefs = list(self.get_single_paths(urls3))
 
         # First look on the page for downloads, that should be done
+        logging.info(f"33########### concrete pages ########33: {hrefs}")
         for href in hrefs:
-            if "e-print" in href:
-                logging.warning(f"getting {href}")
-                name = hashlib.md5(href.encode('utf-8')).hexdigest()
-                tar_gz_path = config.tex_data + name + ".tar.gz"
-                path  =  config.tex_data + name
-                os.system(
-                    f'wget '
-                    f'--user-agent="Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.103 Safari/537.36" '
-                    f'{href} '
-                    f'-O {tar_gz_path}')
+            time.sleep(random.uniform(0.09, 0.5))
+            response = requests.get(href, headers=self.headers)
 
-                unpack_path = config.tex_data + name
-                os.system(f"mkdir -p {unpack_path} & "
-                          f"tar -zxvf {tar_gz_path} -C {unpack_path}/")
-                tex_files = glob.glob(path + "/*" + self.path_spec._to)
-                yield from [(tex_file, {'meta':{'url': url}}) for tex_file in tex_files]
 
-        # if not enough, random surf further
-        for href in hrefs:
-                self.yet.append(href)
-                print(f"Got {href}")
-                yield from self.surf_random(href)
-                time.sleep(random.uniform(0.9, 1.9))
+            yield (response.text, {'meta':{'url': href}})
+
+    @file_persistent_cached_generator(config.cache + '3.json')
+    def get_single_paths(self, urls3):
+        hrefs = {}
+        for url, meta in urls3:
+            try:
+                logging.info(f"trying 3 {url}")
+                response = self.driver.get(url)
+                time.sleep(1)
+                htmlSource = self.driver.page_source
+                soup = BeautifulSoup(htmlSource, "lxml")
+
+                nav_item = soup.find("div", class_="ng-trigger-shrinkOut")
+                links = nav_item.findAll('a')
+                _links = [f'https://any-api.com{link.attrs["href"]}' for link in links
+                          if link and "href" in link.attrs]
+                logging.info(f"found {_links}")
+
+                hrefs.update({u: meta for u in _links})
+
+            except Exception as e:
+                logging.error(
+                    f"Connection error, maybe timeout, maybe headers, maybe bad connection, continuing elsewhere: {e}")
+        return {link: () for link in hrefs}
+
+
+    @file_persistent_cached_generator(config.cache + '2.json')
+    def get_raw_paths(self, urls2):
+        urls3 = {}
+
+        for url, meta in urls2:
+            try:
+                logging.info(f"trying 2 {url}")
+                time.sleep(random.uniform(0.1, 1.0))
+                response = self.driver.get(url)
+                time.sleep(5)
+                htmlSource = self.driver.page_source
+                soup = BeautifulSoup(htmlSource, "lxml")
+
+                links = soup.findAll('a', {"class": "truncate"})
+                links = [f'https://any-api.com{link.attrs["href"]}' for link in links]
+                urls3.update({u: meta for u in links})
+                logging.info(f"found {links}")
+            except Exception as e:
+                logging.error(
+                    f"Connection error, maybe timeout, maybe headers, maybe bad connection, continuing elsewhere: {e}")
+                raise e
+        return {link: () for link in urls3}
+
+    @file_persistent_cached_generator(config.cache + '1.json')
+    def get_groups(self, links):
+        urls2 = {}
+        for url, meta in links:
+            try:
+                time.sleep(random.uniform(0.1, 1.0))
+                logging.info(f" 1 trying {url}")
+
+                response = requests.get(url, headers=self.headers)
+                soup = BeautifulSoup(response.text, "lxml")
+
+                _urls2 = soup.findAll('a', {"class": "fill-link"})
+                _urls2 = [f'https://any-api.com{link.attrs["href"]}' for link in _urls2]
+                random.shuffle(_urls2)
+                urls2.update({u: meta for u in _urls2})
+                if response.status_code == 404:
+                    logging.error(f"404 for {url}")
+            except Exception as e:
+                logging.error(
+                    f"Connection error, maybe timeout, maybe headers, maybe bad connection, continuing elsewhere: {e}")
+
+        return {link: () for link in urls2}
+
+    @file_persistent_cached_generator(config.cache + '0.json')
+    def get_landing_page(self, url0):
+        try:
+            response = requests.get(url0, headers=self.headers)
+            soup = BeautifulSoup(response.text, "lxml")
+
+            links = soup.findAll('a', {"class": "tag-link"})
+            links = [f'{url0}/?tag={link.text}' for link in links]
+            random.shuffle(links)
+            if response.status_code == 404:
+                logging.error(f"404 for {url0}")
+        except Exception as e:
+            logging.error(
+                f"Connection error, maybe timeout, maybe headers, maybe bad connection, continuing elsewhere: {e}")
+        return list({link: () for link in links}.items())
 
 
 

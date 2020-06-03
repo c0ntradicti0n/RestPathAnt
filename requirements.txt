@@ -3,3 +3,6 @@ matplotlib
 pygraphviz
 more_itertools
 requests
+beautifulsoup4
+lxml
+requests_html

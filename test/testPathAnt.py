@@ -1,5 +1,6 @@
 import unittest
 
+from Parse.parse import Parse
 from Scrape.scrape import Scrape
 from generalape.api import Api
 from generalape.generalape import GeneralApe
@@ -14,7 +15,7 @@ class testRestApe(unittest.TestCase):
         url_update: dict
         apes = []
 
-        apis = list(Parse(Scrape("https://any-api.com/")))
+        apis = list(Scrape("https://any-api.com/"))
 
         for url, (funs, url_update) in apis.items():
             url = url.format(** url_update)
