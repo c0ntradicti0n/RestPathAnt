@@ -13,15 +13,15 @@ from pathant.converters import converters, converter_nodes
 
 
 class PathAnt:
-    def __init__(self):
+    def __init__(self, use_converters = True):
         self.G = nx.DiGraph()
 
-        for _from, _to, functional_object in converters:
-            self.add_edge(_from, _to, functional_object)
+        if use_converters:
+            for _from, _to, functional_object in converters:
+                self.add_edge(_from, _to, functional_object)
 
-        for _node, functional_object in converter_nodes:
-            self.add_node(_node, functional_object)
-
+            for _node, functional_object in converter_nodes:
+                self.add_node(_node, functional_object)
 
     def realize_node(self, node):
         os.system(f"mkdir {node.dir}")
@@ -39,14 +39,15 @@ class PathAnt:
                 return self.__call__(source, over, *args) + self.__call__(over, target, **kwargs)
 
         converters_path = self.make_path(self.G, source, target)
-        converters_implications = {uv: [_a for _a in a if _a not in converters_path ]
+        converters_implications = {uv: [_a for _a in a if _a not in converters_path]
                                    for uv, a in nx.get_edge_attributes(self.G, 'implicite').items()
                                    if uv[1] in converters_path
-                                      and [_a for _a in a if _a not in converters_path ] }
-        extra_paths = {self.lookup(edge[0],edge[1]):
-                           [self.estimate_targeting_paths(intermediate_target)  for intermediate_target in intermediate_targets]
-               for edge, intermediate_targets in converters_implications.items()
-                      }
+                                   and [_a for _a in a if _a not in converters_path]}
+        extra_paths = {self.lookup(edge[0], edge[1]):
+                           [self.estimate_targeting_paths(intermediate_target) for intermediate_target in
+                            intermediate_targets]
+                       for edge, intermediate_targets in converters_implications.items()
+                       }
 
         logging.debug(f"found path: {converters_path}")
         pipeline = [self.lookup(*_from_to) for _from_to in pairwise(converters_path)]
@@ -54,43 +55,44 @@ class PathAnt:
 
     def info(self, path="pathant.png", pipelines_to_highlight=None):
         import pylab as plt
-        pylab.rcParams['figure.figsize'] = 10,10
-        plt.figure(3, figsize=(10, 10))
-
+        pylab.rcParams['figure.figsize'] = 100, 100
+        plt.figure(3, figsize=(100, 100))
 
         dG = self.G.copy()
 
         nx.set_edge_attributes(dG, 0, 'color')
         nx.set_edge_attributes(dG, " ", 'label')
 
-
         if pipelines_to_highlight:
-            for  color, pipeline in enumerate(pipelines_to_highlight):
+            for color, pipeline in enumerate(pipelines_to_highlight):
                 pipe_path = self.make_path(dG, pipeline.source, pipeline.target)
                 edges = pairwise(pipe_path)
                 for u, v in edges:
                     dG[u][v]['color'] = color + 1
                 for n in pipe_path:
-                    dG.nodes[n]['label'] =  str(pipeline)
+                    dG.nodes[n]['label'] = str(pipeline)
 
         edge_colors = nx.get_edge_attributes(dG, 'color').values()
 
         for (u, v, d) in dG.edges(data=True):
             d["functional_object"] = d['functional_object'].__class__.__name__
+            if 'match' in d and d['match']:
+                source_plug, target_plug = d['match']
+                d["functional_object"] = (d["functional_object"] or "") + "->" + (
+                            target_plug.arg_name or "___") + ":" + (target_plug.type_name or "unknown type")
 
-        pos = nx.nx_agraph.graphviz_layout(dG)
+        pos = nx.nx_agraph.graphviz_layout(dG, prog="dot")
 
-        edge_labels = {(u,v):
+        edge_labels = {(u, v):
                            f"{a['functional_object']} " +
-                           ("(needs also " + (", ".join(a['implicite'])) +')' if 'implicite' in a else "")
+                           ("(needs also " + (", ".join(a['implicite'])) + ')' if 'implicite' in a else "")
                        for u, v, a in dG.edges(data=True)}
-
 
         nx.draw_networkx_edge_labels(dG, pos, edge_labels=edge_labels, rotate=False)
         nx.draw(dG, pos, node_color="blue",
                 font_weight='bold',
-                edge_color = edge_colors,
-                edge_labels=False,
+                edge_color=edge_colors,
+                # edge_labels=False,
                 arrowsize=20, label='Path Ant',
                 node_size=150, edge_cmap=plt.cm.plasma)
 
@@ -98,10 +100,10 @@ class PathAnt:
         for node, coords in pos.items():
             pos_attrs[node] = coords[0] + 0.08, coords[1]
 
-        labels = {n: str(f"{data['functional_object'].api.url if data else n} ") for n, data in self.G.nodes(data=True)}
+        labels = {n: str(f"{data['functional_object'].url if data else n} ") for n, data in self.G.nodes(data=True)}
         nx.draw_networkx_labels(dG, pos_attrs, labels=labels)
         pylab.savefig(path, dpi=100)
-        plt.legend(scatterpoints = 1)
+        plt.legend(scatterpoints=1)
         plt.show()
 
     def add_node(self, node, functional_object, **kwargs):
@@ -117,16 +119,16 @@ class PathAnt:
                 others.remove(_from)
                 self.add_edge(_from, tos, functional_object,
                               **{"implicite":
-                                   others})
+                                     others})
 
         elif isinstance(tos, (List, Tuple)):
             for _to in tos:
-                self.add_edge(froms,_to, functional_object, **kwargs)
+                self.add_edge(froms, _to, functional_object, **kwargs)
         else:
-            #functional_object.path_spec._from = "." + froms
-            #functional_object.path_spec._to = "." + tos
+            # functional_object.path_spec._from = "." + froms
+            # functional_object.path_spec._to = "." + tos
 
-            self.G.add_edge(froms,tos, functional_object=functional_object, **kwargs)
+            self.G.add_edge(froms, tos, functional_object=functional_object, **kwargs)
 
     def lookup(self, _from, _to, attr='functional_object'):
         return self.G[_from][_to][attr]
@@ -139,6 +141,3 @@ class PathAnt:
     def get_all_possible_edges(self):
         for (_in, _in_data), (_out, _out_data) in itertools.permutations(self.G.nodes(data=True), 2):
             yield Pipeline([_in_data['functional_object'], _out_data['functional_object']])
-
-
-

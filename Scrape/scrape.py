@@ -1,13 +1,9 @@
-import glob
-import hashlib
-import os
+import itertools
 from itertools import count
 import random
-import requests_html
 
 
 import requests
-import time
 from bs4 import BeautifulSoup
 
 import config
@@ -17,10 +13,8 @@ from pathant.PathSpec import PathSpec
 
 import time
 from selenium import webdriver
-from selenium import webdriver
 
-profile = webdriver.FirefoxProfile()
-profile.set_preference("browser.privatebrowsing.autostart", True)
+profile = webdriver.Firefox(executable_path="/home/finn/PycharmProjects/RestPathAnt/geckodriver")
 
 import logging
 
@@ -31,14 +25,15 @@ class Scrape(PathSpec):
     def __init__(self, *args, url="any-api.com", **kwargs):
         super().__init__(*args, **kwargs)
         self.url = url
+        self.MAX = 2
 
-    driver = webdriver.Firefox(firefox_profile=profile)
+    driver = profile
 
     def __iter__(self):
         self.scrape_count = count()
         self.i = 0
         self.yet = []
-        yield from self(self.url)
+        yield itertools.islice(self(self.url), self.MAX)
 
     headers = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.149 Safari/537.36'}
 
@@ -62,12 +57,12 @@ class Scrape(PathSpec):
 
         # First look on the page for downloads, that should be done
         logging.info(f"33########### concrete pages ########33: {hrefs}")
-        for href in hrefs:
+        for href, meta in hrefs:
             time.sleep(random.uniform(0.09, 0.5))
-            response = requests.get(href, headers=self.headers)
-
-
-            yield (response.text, {'meta':{'url': href}})
+            response = self.driver.get(href)
+            time.sleep(1)
+            htmlSource = self.driver.page_source
+            yield (htmlSource, {'meta':{'url': href}})
 
     @file_persistent_cached_generator(config.cache + '3.json')
     def get_single_paths(self, urls3):
@@ -114,7 +109,7 @@ class Scrape(PathSpec):
             except Exception as e:
                 logging.error(
                     f"Connection error, maybe timeout, maybe headers, maybe bad connection, continuing elsewhere: {e}")
-                raise e
+                continue
         return {link: () for link in urls3}
 
     @file_persistent_cached_generator(config.cache + '1.json')

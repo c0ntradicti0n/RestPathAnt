@@ -6,3 +6,11 @@ requests
 beautifulsoup4
 lxml
 requests_html
+numpy
+wmd
+nltk
+spacy
+addict
+cytoolz
+pyprover
+pyxdameraulevenshtein
