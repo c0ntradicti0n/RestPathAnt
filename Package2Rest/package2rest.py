@@ -1,7 +1,6 @@
 import unittest
 from collections import Callable
 from json import dumps
-from pprint import pprint
 from wsgiref.simple_server import make_server
 
 import falcon as falcon
@@ -48,19 +47,25 @@ class Import2Rest(PathSpec):
                     doc = doc_parse
 
                     def on_post(self, req, resp):
-                        input = req.media
                         try:
-                            input = {k: eval(v) for k, v in input.items()}
-                        except Exception as e:
-                            input = json_tricks.loads(input)
+                            input = req.bounded_stream.read().decode("utf-8")
+                            try:
+                                input = {k: eval(v) for k, v in input.items()}
+                            except Exception as e:
+                                try:
+                                    input = json_tricks.loads(input)
+                                except Exception as e:
+                                    print (f"could not parse {input}, its empyz now ")
+                                    input={}
 
-                        print (self.doc.__repr__())
-                        result = Import2Rest.functions[self.fname](**input)
+                            print (self.doc.__repr__())
 
-                        try:
+                            result = Import2Rest.functions[self.fname](**input)
+
+
                             resp.body = dumps(result)
                         except Exception as e:
-                            resp.body = json_tricks.dumps(result)
+                            resp.body = json_tricks.dumps(  e.__repr__())
 
                 T.__qualname__ = str(fname)
                 self.functions[fname] = thing

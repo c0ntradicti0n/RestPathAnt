@@ -1,7 +1,10 @@
 import unittest
 import numpy
 import spacy
+
+import config
 from Package2Rest.package2rest import Import2Rest
+from helpers.cache_tools import file_persistent_cached_generator
 from pathant.Converter import converter
 from pathant.PathSpec import PathSpec
 
@@ -25,6 +28,7 @@ class WireApe(PathSpec):
     returns = {}
     route_descriptions = {}
 
+    @file_persistent_cached_generator('wire_ape.json')
     def __call__(self, package):
         package = list(package)
         for url, route_description in package:

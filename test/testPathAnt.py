@@ -40,7 +40,7 @@ class testRestApe(unittest.TestCase):
         pa = PathAnt()
         pa.info()
 
-        for edge_pipe in pa.get_all_possible_edges():
+        for edge_pipe in pa.get_all_possible_pipelines():
             list(edge_pipe("blub", calling_api_fun="test"))
 
         po = PathAnt()

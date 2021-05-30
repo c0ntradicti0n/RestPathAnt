@@ -55,8 +55,8 @@ class PathAnt:
 
     def info(self, path="pathant.png", pipelines_to_highlight=None):
         import pylab as plt
-        pylab.rcParams['figure.figsize'] = 100, 100
-        plt.figure(3, figsize=(100, 100))
+        pylab.rcParams['figure.figsize'] = 10, 10
+        plt.figure(3, figsize=(10, 10))
 
         dG = self.G.copy()
 
@@ -100,7 +100,7 @@ class PathAnt:
         for node, coords in pos.items():
             pos_attrs[node] = coords[0] + 0.08, coords[1]
 
-        labels = {n: str(f"{data['functional_object'].url if data else n} ") for n, data in self.G.nodes(data=True)}
+        labels = {n: str(f"{ n} ") for n, data in self.G.nodes(data=True)}
         nx.draw_networkx_labels(dG, pos_attrs, labels=labels)
         pylab.savefig(path, dpi=100)
         plt.legend(scatterpoints=1)
@@ -138,6 +138,16 @@ class PathAnt:
             if len(possible_path) == 2:
                 return self.lookup(*possible_path)
 
-    def get_all_possible_edges(self):
+    def get_all_possible_pipelines(self):
+        """
+        makes pipilines for all node combos
+        """
         for (_in, _in_data), (_out, _out_data) in itertools.permutations(self.G.nodes(data=True), 2):
             yield Pipeline([_in_data['functional_object'], _out_data['functional_object']])
+
+
+    def get_edges(self):
+        """
+        makes pipilines for all node combos
+        """
+        return self.G.edges(data=True)

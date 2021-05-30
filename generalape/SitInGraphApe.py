@@ -4,18 +4,13 @@ import logging
 import unittest
 
 import numpy
-import requests
 
 from Package2Rest.package2rest import Import2Rest
 from WireApe.wire_ape import WireApe
-from generalape.TryCallApe import TryCallApe
-from generalape.ape import Ape
-from generalape.api import Api
 from helpers.cache_tools import file_persistent_cached_generator
 from pathant.Converter import converter
 from pathant.PathAnt import PathAnt
 from pathant.PathSpec import PathSpec
-from pathant.converters import converter_nodes
 
 
 api_hash_counter = itertools.count(0, 1)
@@ -45,11 +40,12 @@ class SitInGraphApe(PathSpec):
                 url1, api_description1, target_plug = api1
                 url2, api_description2, source_plug = api2
 
-                pathAnt.add_node(url1, functional_object=Api(url=url1, funs=[]), description = api_description1)
-                pathAnt.add_node(url2, functional_object=Api(url=url2, funs=[]), description = api_description2)
-                pathAnt.add_edge(url1, url2, functional_object=TryCallApe, match=(source_plug, target_plug))
+                pathAnt.add_node(url1, functional_object=api_description1, description = api_description1)
+                pathAnt.add_node(url2, functional_object=api_description2, description = api_description2)
+                pathAnt.add_edge(url1, url2, functional_object=(url1, url2), match=(source_plug, target_plug))
 
         pathAnt.info(path="api_paths_connected_on_parameters")
+        yield pathAnt, {}
 
 
 class TEST(unittest.TestCase):

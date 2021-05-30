@@ -3,6 +3,9 @@ import json
 import logging
 import os
 
+import json_tricks
+
+
 def file_persistent_cached_generator(filename):
 
     def decorator(original_func):
@@ -14,7 +17,7 @@ def file_persistent_cached_generator(filename):
                 with open(filename, 'r') as f:
                     cache = list(f.readlines())
 
-                cache = dict([tuple(json.loads(line)) for line in cache])
+                cache = [tuple(json_tricks.loads(line)) for line in cache]
             except (IOError, ValueError) as e:
                 logging.warning(f'no cache, starting from 0 {e}')
                 cache = {}
@@ -22,7 +25,7 @@ def file_persistent_cached_generator(filename):
             #if isinstance( param[1], list):
             #    yield from apply_iterating_and_caching(cache, cwd, param)
             #else:
-            for result in cache.items():
+            for result in cache:
                 os.chdir(cwd)
                 yield result
             if cache_full and not cache:
@@ -33,15 +36,14 @@ def file_persistent_cached_generator(filename):
             generator = original_func(*param)
             if isinstance(generator, dict):
                 generator = list(generator.items())
-            for res, meta in generator:
 
-                result_string = json.dumps((res, meta)) + "\n"
-                if no_cache or res not in cache:
-                    os.chdir(cwd)
-                    with open(filename, 'a') as f:
-                        f.write(result_string)
-                    os.chdir(cwd)
-                    yield (res, meta)
+            for res, meta in generator:
+                result_string = json_tricks.dumps((res, meta)) + "\n"
+                os.chdir(cwd)
+                with open(filename, 'a') as f:
+                    f.write(result_string)
+                os.chdir(cwd)
+                yield res, meta
 
         functools.update_wrapper(new_func, original_func)
 
